@@ -5,6 +5,11 @@ From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sid
 [![CoRL](https://img.shields.io/badge/CoRL-2026-orange)](https://arxiv.org/abs/2606.12603)
 [![VisNavKit](https://img.shields.io/badge/VisNavKit-training%20recipe-green)](https://github.com/DhlinV/visnavkit)
 
+<p align="center">
+  <img src="_assets/teaser.gif" alt="FlowPilot teaser" width="800">
+</p>
+<p align="center"><sub>Sidewalk lane keeping · obstacle avoidance · pedestrian awareness · night driving, from the <a href="https://vail.cs.ucla.edu/FlowPilot/">project page</a> (<a href="_assets/teaser.mp4">mp4</a>)</sub></p>
+
 The training architecture is available as the `model=flowpilot` recipe in **[VisNavKit](https://github.com/DhlinV/visnavkit)** — FastViT-MA36, a 4-layer scene transformer, 64 k-means anchors and the anchored rectified-flow decoder with Beta(1.5, 1) time sampling, composed from swappable Hydra groups, with ONNX export and an open-loop benchmark:
 
 ```bash
