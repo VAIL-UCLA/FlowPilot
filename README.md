@@ -16,4 +16,19 @@ The training architecture is available as the `model=flowpilot` recipe in **[Vis
 uv run visnavkit-train dataset=torch model=flowpilot
 ```
 
+## Closed-loop results on SidewalkBench-GS
+
+FlowPilot drives closed-loop in photorealistic Gaussian-splat reconstructions of real sidewalks from SidewalkBench-GS. Each clip shows the onboard view with the predicted path, a third-person view (top left) and the top-down trajectory (top right).
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="_assets/sidewalkbench_gs_cars_crossing.gif" alt="FlowPilot crossing a street with parked cars on SidewalkBench-GS" width="400"></td>
+    <td align="center"><img src="_assets/sidewalkbench_gs_yellow_car_crossing.gif" alt="FlowPilot crossing a street past a yellow car on SidewalkBench-GS" width="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Street crossing with parked cars</sub></td>
+    <td align="center"><sub>Street crossing past a yellow car</sub></td>
+  </tr>
+</table>
+
 Code, checkpoints and the human-preference alignment stage will be released here.
