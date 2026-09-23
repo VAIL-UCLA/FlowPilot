@@ -14,7 +14,7 @@ From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sid
   <img src="_assets/sidewalkbench_gs_cars_crossing.gif" alt="FlowPilot on SidewalkBench-GS: crossing with parked cars" width="398">
   <img src="_assets/sidewalkbench_gs_yellow_car_crossing.gif" alt="FlowPilot on SidewalkBench-GS: crossing past a yellow car" width="398">
 </p>
-<p align="center"><sub>Closed-loop rollouts in SidewalkBench-GS · Gaussian-splat reconstructions of real sidewalks · street crossing with parked cars · crossing past a yellow car</sub></p>
+<p align="center"><sub>Closed-loop rollouts in SidewalkBench-GS · Gaussian-splat reconstructions of real sidewalks</sub></p>
 
 The training architecture is available as the `model=flowpilot` recipe in **[VisNavKit](https://github.com/DhlinV/visnavkit)** — FastViT-MA36, a 4-layer scene transformer, 64 k-means anchors and the anchored rectified-flow decoder with Beta(1.5, 1) time sampling, composed from swappable Hydra groups, with ONNX export and an open-loop benchmark:
 
