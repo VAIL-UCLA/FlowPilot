@@ -10,25 +10,16 @@ From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sid
 </p>
 <p align="center"><sub>GPS-guided long-horizon navigation · sidewalk lane keeping · obstacle avoidance · pedestrian awareness · night driving</sub></p>
 
+<p align="center">
+  <img src="_assets/sidewalkbench_gs_cars_crossing.gif" alt="FlowPilot on SidewalkBench-GS: crossing with parked cars" width="398">
+  <img src="_assets/sidewalkbench_gs_yellow_car_crossing.gif" alt="FlowPilot on SidewalkBench-GS: crossing past a yellow car" width="398">
+</p>
+<p align="center"><sub>Closed-loop rollouts in SidewalkBench-GS · Gaussian-splat reconstructions of real sidewalks · street crossing with parked cars · crossing past a yellow car</sub></p>
+
 The training architecture is available as the `model=flowpilot` recipe in **[VisNavKit](https://github.com/DhlinV/visnavkit)** — FastViT-MA36, a 4-layer scene transformer, 64 k-means anchors and the anchored rectified-flow decoder with Beta(1.5, 1) time sampling, composed from swappable Hydra groups, with ONNX export and an open-loop benchmark:
 
 ```bash
 uv run visnavkit-train dataset=torch model=flowpilot
 ```
-
-## Closed-loop results on SidewalkBench-GS
-
-FlowPilot drives closed-loop in photorealistic Gaussian-splat reconstructions of real sidewalks from SidewalkBench-GS. Each clip shows the onboard view with the predicted path, a third-person view (top left) and the top-down trajectory (top right).
-
-<table align="center">
-  <tr>
-    <td align="center"><img src="_assets/sidewalkbench_gs_cars_crossing.gif" alt="FlowPilot crossing a street with parked cars on SidewalkBench-GS" width="400"></td>
-    <td align="center"><img src="_assets/sidewalkbench_gs_yellow_car_crossing.gif" alt="FlowPilot crossing a street past a yellow car on SidewalkBench-GS" width="400"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Street crossing with parked cars</sub></td>
-    <td align="center"><sub>Street crossing past a yellow car</sub></td>
-  </tr>
-</table>
 
 Code, checkpoints and the human-preference alignment stage will be released here.
