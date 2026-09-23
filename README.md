@@ -1,8 +1,11 @@
 # FlowPilot
-From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sidewalk Navigation
+
+**From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sidewalk Navigation**
+
+Conference on Robot Learning (CoRL) 2026
 
 [![arXiv](https://img.shields.io/badge/arXiv-2606.12603-blue)](https://arxiv.org/abs/2606.12603)
-[![CoRL](https://img.shields.io/badge/CoRL-2026-orange)](https://arxiv.org/abs/2606.12603)
+[![CoRL 2026](https://img.shields.io/badge/CoRL-2026-orange)](https://www.corl.org/)
 [![VisNavKit](https://img.shields.io/badge/VisNavKit-training%20recipe-green)](https://github.com/DhlinV/visnavkit)
 
 <p align="center">
@@ -16,10 +19,14 @@ From Imitation to Alignment: Human-Preference Flow Policies for Long-Horizon Sid
 </p>
 <p align="center"><sub>Closed-loop rollouts in SidewalkBench-GS · Gaussian-splat reconstructions of real sidewalks</sub></p>
 
-The training architecture is available as the `model=flowpilot` recipe in **[VisNavKit](https://github.com/DhlinV/visnavkit)** — FastViT-MA36, a 4-layer scene transformer, 64 k-means anchors and the anchored rectified-flow decoder with Beta(1.5, 1) time sampling, composed from swappable Hydra groups, with ONNX export and an open-loop benchmark:
+## Training recipe
+
+The FlowPilot architecture ships as the `model=flowpilot` recipe in **[VisNavKit](https://github.com/DhlinV/visnavkit)**: a FastViT-MA36 encoder, a 4-layer scene transformer, 64 k-means anchors and an anchored rectified-flow decoder with Beta(1.5, 1) time sampling. The components are swappable Hydra groups, and the kit includes ONNX export and an open-loop benchmark.
 
 ```bash
 uv run visnavkit-train dataset=torch model=flowpilot
 ```
+
+## Release
 
 Code, checkpoints and the human-preference alignment stage will be released here.
