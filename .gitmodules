@@ -1,0 +1,4 @@
+[submodule "visnavkit"]
+	path = visnavkit
+	url = https://github.com/VAIL-UCLA/visnavkit
+	branch = dev
