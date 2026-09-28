@@ -53,25 +53,34 @@ pip install onnxruntime-gpu      # optional, replaces onnxruntime for CUDA
 
 ```python
 import numpy as np
-from flowpilot import FlowPilotNavigator
+from flowpilot import FlowPilotNavigator, GpsGoal, Route, RouteGoal, compass_to_yaw
 
 nav = FlowPilotNavigator(variant="flowpilot-dst-small", device="cuda")   # downloads the graph
 
 obs = np.random.rand(1, nav.context_size, 3, 216, 384).astype(np.float32)   # (B, T, 3, H, W) in [0, 1]
-goal_xy = [8.0, 0.5]    # metres in the ego frame: x forward, y left
 ego_vw = [1.2, 0.0]     # measured speed (m/s) and yaw rate (rad/s)
 
-traj, scores = nav.inference_trajectory(obs, goal_xy, ego_vw)          # (B, 6, 80, 5), (B, 6)
-vw, plan = nav.inference_vw(obs, goal_xy, ego_vw)                      # pure pursuit, vw: (B, 2)
-vw, plan = nav.inference_vw(obs, goal_xy, ego_vw, controller="pd")     # PD
+# Point goal: metres in the ego frame, x forward, y left
+vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw)                    # pure pursuit, vw: (B, 2)
+vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw, controller="pd")   # PD
+traj, scores = nav.inference_trajectory(obs, [8.0, 0.5], ego_vw)        # (B, 6, 80, 5), (B, 6)
 
-vw, plan = nav.step(obs[0, -1], goal_xy, ego_vw)   # streaming: one frame per call at 20 Hz
-nav.reset()                                        # between episodes
+# GPS goal: a waypoint and the robot's fix, converted to a point goal
+goal = GpsGoal(goal=(34.06901, -118.44512), robot=(34.06893, -118.44520), yaw=compass_to_yaw(45.0))
+vw, plan = nav.inference_vw(obs, goal, ego_vw)
+
+# Route goal: the route patch around the robot, plus the route point 12 m ahead as the point goal
+route = Route([[0.0, 0.0], [25.0, 0.0], [25.0, 40.0]], crosswalks=None)   # world metres; Route.from_gps for lat / lon
+vw, plan = nav.inference_vw(obs, RouteGoal(route, pose=(3.0, 0.2, 0.0)), ego_vw)
+
+vw, plan = nav.step(obs[0, -1], [8.0, 0.5], ego_vw)   # streaming: one frame per call at 20 Hz
+nav.reset()                                           # between episodes
 ```
 
 - **Observations** are 20 frames at 20 Hz, oldest first, at any size. Shorter histories are padded with their oldest frame.
 - **Plans** hold `[x, y, yaw, v, w]` every 0.05 s up to 4 s, with modes ranked best first.
-- **Ego status** should be measured odometry. Without it the previous command stands in, and a window of zeros reads as a robot at rest.
+- **Goals** are required, as the exports have no goal-free input. World poses are `(x, y, yaw)` with x east, y north and yaw counter-clockwise from east.
+- **Ego status** should be measured odometry. Without it the previous command stands in, and a window of zeros reads as a robot at rest. A route goal with a pose per frame derives it from the poses.
 - **Controllers** also run on their own: `make_controller("pure_pursuit").step(plan, ego_speed=1.2)` takes any `[x, y]` or `[x, y, yaw, v, w]` path. Limits, lookahead and gains are config fields, for example `max_v`, `max_steering_angle=None` for differential drive, `kp` and `kd`.
 
 ## Train and export
