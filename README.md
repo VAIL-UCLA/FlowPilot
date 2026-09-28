@@ -42,6 +42,38 @@ Weights are hosted in the [VAIL model zoo](https://huggingface.co/UCLA-VAIL/Visu
 
 Inputs, outputs and a minimal ONNX Runtime example are in the [ONNX guide](https://github.com/VAIL-UCLA/visnavkit/blob/dev/docs/flowpilot_dst_onnx.md).
 
+## Inference
+
+`flowpilot` wraps the ONNX exports in the interface of the [Navigation Model Zoo](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public): frames and a goal in, a plan and a `(v, w)` command out.
+
+```bash
+pip install -e .                 # from the FlowPilot root
+pip install onnxruntime-gpu      # optional, replaces onnxruntime for CUDA
+```
+
+```python
+import numpy as np
+from flowpilot import FlowPilotNavigator
+
+nav = FlowPilotNavigator(variant="flowpilot-dst-small", device="cuda")   # downloads the graph
+
+obs = np.random.rand(1, nav.context_size, 3, 216, 384).astype(np.float32)   # (B, T, 3, H, W) in [0, 1]
+goal_xy = [8.0, 0.5]    # metres in the ego frame: x forward, y left
+ego_vw = [1.2, 0.0]     # measured speed (m/s) and yaw rate (rad/s)
+
+traj, scores = nav.inference_trajectory(obs, goal_xy, ego_vw)          # (B, 6, 80, 5), (B, 6)
+vw, plan = nav.inference_vw(obs, goal_xy, ego_vw)                      # pure pursuit, vw: (B, 2)
+vw, plan = nav.inference_vw(obs, goal_xy, ego_vw, controller="pd")     # PD
+
+vw, plan = nav.step(obs[0, -1], goal_xy, ego_vw)   # streaming: one frame per call at 20 Hz
+nav.reset()                                        # between episodes
+```
+
+- **Observations** are 20 frames at 20 Hz, oldest first, at any size. Shorter histories are padded with their oldest frame.
+- **Plans** hold `[x, y, yaw, v, w]` every 0.05 s up to 4 s, with modes ranked best first.
+- **Ego status** should be measured odometry. Without it the previous command stands in, and a window of zeros reads as a robot at rest.
+- **Controllers** also run on their own: `make_controller("pure_pursuit").step(plan, ego_speed=1.2)` takes any `[x, y]` or `[x, y, yaw, v, w]` path. Limits, lookahead and gains are config fields, for example `max_v`, `max_steering_angle=None` for differential drive, `kp` and `kd`.
+
 ## Train and export
 
 Run these from the `visnavkit` directory.

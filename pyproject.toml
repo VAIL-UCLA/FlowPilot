@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowpilot"
+version = "0.1.0"
+description = "FlowPilot inference: ONNX navigator with pure-pursuit and PD controllers"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy", "onnxruntime", "opencv-python-headless", "huggingface_hub"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["flowpilot"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
