@@ -39,15 +39,11 @@ Weights are hosted in the [VAIL model zoo](https://huggingface.co/UCLA-VAIL/Visu
 | --- | --- | --- | --- | --- | --- |
 | `flowpilot-dst-small` | `flowpilot_dst_clips1k` | FastViT-T12 frame pairs, anchored flow DiT | 21.4M | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.onnx) |
 | `flowpilot-dst-dune` | `flowpilot_dune_dst_clips1k` | frozen DUNE ViT-B/14, anchored flow DiT | 208.2M | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.onnx) |
+| `flowpilot-base-goal-less`\* | — | FastViT, anchored flow DiT, goal-free | 239.3M | — | [onnx](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/resolve/main/FlowPilot_Official/flowpilot_base_goal_less.onnx) |
 
-Inputs, outputs and a minimal ONNX Runtime example are in the [ONNX guide](https://github.com/VAIL-UCLA/visnavkit/blob/dev/docs/flowpilot_dst_onnx.md).
+\* The model with the old recipe, for experiments. It is goal-free and differs from the DST models: a pinhole camera at 512 x 288 (fx = fy = 210.667, cx = 256, cy = 144), 21 frames at 5 Hz (4 s of history) in, 64 modes of 20 `[x, y]` waypoints at 5 Hz out (drop mode 0 of the raw 65, a register token). `flowpilot` does not wrap it; use the zoo's [`inference.py`](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/blob/main/FlowPilot_Official/inference.py) and `model_info_goal_free.yaml`.
 
-**Goal-free FlowPilot.** [`FlowPilot_Official/flowpilot_base_goal_less.onnx`](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/blob/main/FlowPilot_Official/flowpilot_base_goal_less.onnx) in the Navigation Model Zoo is a different model, with its own `inference.py` and `model_info_goal_free.yaml` there; `flowpilot` does not wrap it.
-
-- **Camera:** pinhole at 512 x 288, fx = fy = 210.667, cx = 256, cy = 144, 0.456 m above the ground. Not the fisheye below.
-- **Frames:** 21 RGB frames in [0, 1] at **5 Hz** (t-20 ... t, 4 s of history, every 4th frame of a 20 Hz stream), oldest first, `(B, 21, 3, 288, 512)`.
-- **Inputs:** no goal; `embodiment_id` 0 and `metric_spacing` `[0.0, 0.51, -0.16, 0.16]`.
-- **Outputs:** 64 modes of 20 `[x, y]` waypoints at 5 Hz (4 s) and their scores. The raw graph returns 65 modes: drop index 0, a register token.
+Inputs, outputs and a minimal ONNX Runtime example for the DST models are in the [ONNX guide](https://github.com/VAIL-UCLA/visnavkit/blob/dev/docs/flowpilot_dst_onnx.md).
 
 ## Inference
 
