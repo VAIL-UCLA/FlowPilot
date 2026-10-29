@@ -29,7 +29,7 @@ def project(pts):
     return np.stack([FX * s * X + CX, FY * s * Y + CY], axis=-1) * SCALE, Z > 0.25
 
 
-def draw_ribbon(img, plan_xy, glow=0.18):
+def draw_ribbon(img, plan_xy, proj=project, glow=0.18):
     pts = np.concatenate([[[0.0, 0.0]], plan_xy], axis=0).astype(np.float64)
     arc = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))])
     if arc[-1] < 0.35:  # standing still: no path
@@ -44,7 +44,7 @@ def draw_ribbon(img, plan_xy, glow=0.18):
     path = np.stack([np.convolve(pad[:, i], np.ones(k) / k, mode="valid") for i in range(2)], axis=-1)
     d = np.gradient(path, axis=0)
     nrm = np.stack([-d[:, 1], d[:, 0]], axis=-1) / np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-9)
-    (luv, lok), (ruv, rok) = project(path + HALF_WIDTH * nrm), project(path - HALF_WIDTH * nrm)
+    (luv, lok), (ruv, rok) = proj(path + HALF_WIDTH * nrm), proj(path - HALF_WIDTH * nrm)
     ok = lok & rok & np.all(np.abs(luv) < 2e4, axis=1) & np.all(np.abs(ruv) < 2e4, axis=1)
     h = img.shape[0]
     a_map, rim = np.zeros(img.shape[:2], np.float32), np.zeros(img.shape[:2], np.float32)
@@ -81,36 +81,37 @@ def draw_inset(img, patch, size=120):
 
 
 def label(img, text):
-    for color, width in (((0, 0, 0), 4), ((255, 255, 255), 1)):
-        cv2.putText(img, text, (12, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, width, cv2.LINE_AA)
+    for (dx, dy), color in (((1, 1), (0, 0, 0)), ((2, 2), (0, 0, 0)), ((0, 0), (255, 255, 255))):  # drop shadow
+        cv2.putText(img, text, (12 + dx, 28 + dy), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 1, cv2.LINE_AA)
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("clips", nargs="+", type=Path)
-parser.add_argument("--variants", nargs="+", default=["flowpilot-dst-small", "flowpilot-dst-dune"])
-args = parser.parse_args()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("clips", nargs="+", type=Path)
+    parser.add_argument("--variants", nargs="+", default=["flowpilot-dst-small", "flowpilot-dst-dune"])
+    args = parser.parse_args()
 
-for clip in args.clips:
-    runs = [np.load(clip / f"{v}.npz") for v in args.variants]
-    cap = cv2.VideoCapture(str(clip / "front_fe_384x216.mp4"))
-    size = (384 * SCALE * len(runs), 216 * SCALE)
-    ffmpeg = subprocess.Popen(
-        ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{size[0]}x{size[1]}", "-r", "20",
-         "-i", "-", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(clip / "flowpilot_viz.mp4")],
-        stdin=subprocess.PIPE)
-    t = 0
-    while (ok := cap.read())[0]:
-        panels = []
-        for variant, run in zip(args.variants, runs):
-            img = cv2.resize(ok[1], (size[0] // len(runs), size[1]), interpolation=cv2.INTER_CUBIC)
-            i = np.searchsorted(run["t"], t)
-            if i < len(run["t"]) and run["t"][i] == t:
-                draw_ribbon(img, run["plan"][i, :, :2])
-                draw_inset(img, run["patch"][i])
-            label(img, variant.removeprefix("flowpilot-dst-"))
-            panels.append(img)
-        ffmpeg.stdin.write(np.hstack(panels).tobytes())
-        t += 1
-    ffmpeg.stdin.close()
-    ffmpeg.wait()
-    print(clip / "flowpilot_viz.mp4")
+    for clip in args.clips:
+        runs = [np.load(clip / f"{v}.npz") for v in args.variants]
+        cap = cv2.VideoCapture(str(clip / "front_fe_384x216.mp4"))
+        size = (384 * SCALE * len(runs), 216 * SCALE)
+        ffmpeg = subprocess.Popen(
+            ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{size[0]}x{size[1]}", "-r", "20",
+             "-i", "-", "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", str(clip / "flowpilot_viz.mp4")],
+            stdin=subprocess.PIPE)
+        t = 0
+        while (ok := cap.read())[0]:
+            panels = []
+            for variant, run in zip(args.variants, runs):
+                img = cv2.resize(ok[1], (size[0] // len(runs), size[1]), interpolation=cv2.INTER_CUBIC)
+                i = np.searchsorted(run["t"], t)
+                if i < len(run["t"]) and run["t"][i] == t:
+                    draw_ribbon(img, run["plan"][i, :, :2])
+                    draw_inset(img, run["patch"][i])
+                label(img, variant.removeprefix("flowpilot-dst-"))
+                panels.append(img)
+            ffmpeg.stdin.write(np.hstack(panels).tobytes())
+            t += 1
+        ffmpeg.stdin.close()
+        ffmpeg.wait()
+        print(clip / "flowpilot_viz.mp4")

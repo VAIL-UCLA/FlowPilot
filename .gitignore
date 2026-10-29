@@ -5,5 +5,5 @@ __pycache__/
 *.npz
 .pytest_cache/
 
-# Outputs of examples/run_clips.py (*.npz above) and examples/render_clips.py
-mini_data/*/flowpilot_viz.mp4
+# Outputs of the examples (*.npz above, *_viz.mp4 here)
+mini_data/*/*_viz.mp4
