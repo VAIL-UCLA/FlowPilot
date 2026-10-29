@@ -4,3 +4,7 @@ __pycache__/
 *.onnx
 *.npz
 .pytest_cache/
+
+# Local mini dataset (clip folders with videos + .npy/.json), kept out of git
+mini_data/*
+!mini_data/.gitkeep

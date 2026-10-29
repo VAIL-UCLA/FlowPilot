@@ -22,7 +22,7 @@ import numpy as np
 FRAME_DT = 0.05  # the observation window is sampled at 20 Hz
 PATCH_PX = 80  # route patch: 80 x 80 cells
 PATCH_MPP = 0.5  # metres per cell, so 40 x 40 m with the robot at the centre
-GOAL_AHEAD_M = 12.0  # the route goal lies this far along the route
+GOAL_AHEAD_M = 20.0  # the route goal lies this far along the route: at or past the encoder's 20 m cap, so it reads as "keep driving"
 CROSSWALK_MAX_RUN_M = 40.0  # a longer run inside a crosswalk polygon stays sidewalk, as in training
 EGO_WINDOW_STEPS = 4  # [v, w] from poses: finite differences over 0.2 s
 WGS84_A = 6378137.0

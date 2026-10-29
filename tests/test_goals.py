@@ -128,8 +128,8 @@ def test_route_goal_lies_ahead_on_the_route():
     goals, patches = RouteGoal(route, poses[-1]).condition(poses)
     assert route.progress == pytest.approx(4.0)
     assert goals.shape == (20, 2) and patches.shape == (20, 80, 80)
-    assert goals[-1] == pytest.approx([6.0, 6.0 - 0.3])  # 12 m along: 6 m east, then 6 m north
-    assert goals[0] == pytest.approx([6.0 + 19 * 0.05, 5.7])
+    assert goals[-1] == pytest.approx([6.0, 14.0 - 0.3])  # 20 m along: 6 m east, then 14 m north
+    assert goals[0] == pytest.approx([6.0 + 19 * 0.05, 13.7])
 
 
 def test_route_goal_holds_at_the_end_of_the_route():
