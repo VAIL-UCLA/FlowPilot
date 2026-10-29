@@ -35,6 +35,7 @@ HF_REPO = "UCLA-VAIL/Visual-Navigation-Model-Checkpoints"
 VARIANTS = {
     "flowpilot-dst-small": "flowpilot-dst-small/flowpilot_dst_fastvit_t12",
     "flowpilot-dst-dune": "flowpilot-dst-dune/flowpilot_dst_dune_vitb14",
+    "improved_flowpilot": "improved_flowpilot/improved_flowpilot_dune_vits14_stream",
 }
 GRAPH_INPUTS = ("vision", "route_patch", "goal", "ego", "action_bounds")
 # Per-step [dx, dy, dyaw, v, w] bounds of the clips1k corpus, [lo; hi]: the row both exports trained with.
@@ -50,6 +51,17 @@ def download(variant: str) -> Path:
     for suffix in (".metadata.json", ".inputs.npz"):
         hf_hub_download(HF_REPO, VARIANTS[variant] + suffix)
     return Path(hf_hub_download(HF_REPO, VARIANTS[variant] + ".onnx"))
+
+
+def make_session(path: Path, device: str):
+    """An ONNX Runtime session on CUDA when asked for and available, else the CPU; and the device it runs on."""
+    import onnxruntime as ort
+
+    ort.set_default_logger_severity(3)
+    providers = ["CPUExecutionProvider"]
+    if str(device).startswith("cuda") and "CUDAExecutionProvider" in ort.get_available_providers():
+        providers.insert(0, ("CUDAExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"}))
+    return ort.InferenceSession(str(path), providers=providers), "cuda" if len(providers) > 1 else "cpu"
 
 
 def front_pad(a: np.ndarray, n: int) -> np.ndarray:
@@ -98,15 +110,8 @@ class FlowPilotNavigator:
         max_w: float = 2.0,
         action_bounds=None,
     ) -> None:
-        import onnxruntime as ort
-
         path = Path(onnx_path) if onnx_path is not None else download(variant)
-        ort.set_default_logger_severity(3)
-        providers = ["CPUExecutionProvider"]
-        if str(device).startswith("cuda") and "CUDAExecutionProvider" in ort.get_available_providers():
-            providers.insert(0, ("CUDAExecutionProvider", {"arena_extend_strategy": "kSameAsRequested"}))
-        self._session = ort.InferenceSession(str(path), providers=providers)
-        self.device = "cuda" if len(providers) > 1 else "cpu"
+        self._session, self.device = make_session(path, device)
 
         shapes = {i.name: i.shape for i in self._session.get_inputs()}
         outputs = [o.name for o in self._session.get_outputs()]

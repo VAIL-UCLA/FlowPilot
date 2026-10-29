@@ -1,6 +1,6 @@
 """Draw each model's 4 s plan on a clip's video, one panel per model; writes <clip>/flowpilot_viz.mp4.
 
-    python examples/render_clips.py mini_data/*/ [--variants flowpilot-dst-small flowpilot-dst-dune]
+    python examples/render_clips.py mini_data/*/ [--variants flowpilot-dst-small flowpilot-dst-dune improved_flowpilot]
 
 The look follows cocobench-gs scripts/compose_r2g_views.py: a cyan ribbon of the robot's width on the ground,
 solid by the robot and fading out at the end of the plan, and the route patch the model saw as an inset.
@@ -88,7 +88,7 @@ def label(img, text):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("clips", nargs="+", type=Path)
-    parser.add_argument("--variants", nargs="+", default=["flowpilot-dst-small", "flowpilot-dst-dune"])
+    parser.add_argument("--variants", nargs="+", default=["flowpilot-dst-small", "flowpilot-dst-dune", "improved_flowpilot"])
     args = parser.parse_args()
 
     for clip in args.clips:

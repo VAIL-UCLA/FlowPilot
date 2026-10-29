@@ -6,6 +6,7 @@ from .goals import GpsGoal, PointGoal, Route, RouteGoal, compass_to_yaw, gps_to_
 __all__ = [
     "FlowPilotNavigator",
     "GpsGoal",
+    "ImprovedFlowPilotNavigator",
     "PDConfig",
     "PDController",
     "PointGoal",
@@ -24,4 +25,8 @@ def __getattr__(name: str):
         from .navigator import FlowPilotNavigator
 
         return FlowPilotNavigator
+    if name == "ImprovedFlowPilotNavigator":
+        from .improved import ImprovedFlowPilotNavigator
+
+        return ImprovedFlowPilotNavigator
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -35,15 +35,16 @@ In an existing clone, run `git submodule update --init` instead.
 
 Weights are hosted in the [VAIL model zoo](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints) on Hugging Face.
 
-| Weights | Experiment | Model | Params | Checkpoint | ONNX |
-| --- | --- | --- | --- | --- | --- |
-| `flowpilot-dst-small` | `flowpilot_dst_clips1k` | FastViT-T12 frame pairs, anchored flow DiT | 21.4M | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.onnx) |
-| `flowpilot-dst-dune` | `flowpilot_dune_dst_clips1k` | frozen DUNE ViT-B/14, anchored flow DiT | 208.2M | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.onnx) |
-| `flowpilot-base-goal-less`\* | — | FastViT, anchored flow DiT, goal-free | 239.3M | — | [onnx](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/resolve/main/FlowPilot_Official/flowpilot_base_goal_less.onnx) |
+| Weights | Experiment | Model | Params | Ego status | Goal | Checkpoint | ONNX |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `flowpilot-dst-small` | `flowpilot_dst_clips1k` | FastViT-T12 frame pairs, anchored flow DiT | 21.4M | yes | point goal + route patch | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-small/flowpilot_dst_fastvit_t12.onnx) |
+| `flowpilot-dst-dune` | `flowpilot_dune_dst_clips1k` | frozen DUNE ViT-B/14, anchored flow DiT | 208.2M | yes | point goal + route patch | [ckpt](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.ckpt) | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/flowpilot-dst-dune/flowpilot_dst_dune_vitb14.onnx) |
+| `improved_flowpilot` | `flowpilot_dune_dst_pair_s5_bridge_route_fisheye_ft_clips1k` | DUNE ViT-S/14 frame pairs, bridge flow, streaming | 153.7M | no | route patch only | — | [onnx](https://huggingface.co/UCLA-VAIL/Visual-Navigation-Model-Checkpoints/resolve/main/improved_flowpilot/improved_flowpilot_dune_vits14_stream.onnx) |
+| `flowpilot-base-goal-less`\* | — | FastViT, anchored flow DiT, goal-free | 239.3M | no | none | — | [onnx](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/resolve/main/FlowPilot_Official/flowpilot_base_goal_less.onnx) |
 
 \* The model with the old recipe, for experiments. It is goal-free and differs from the DST models: a pinhole camera at 512 x 288 (fx = fy = 210.667, cx = 256, cy = 144), 21 frames at 5 Hz (4 s of history) in, 64 modes of 20 `[x, y]` waypoints at 5 Hz out (drop mode 0 of the raw 65, a register token). `flowpilot` does not wrap it; use the zoo's [`inference.py`](https://huggingface.co/UCLA-VAIL/Navigation-Model-Zoo-Public/blob/main/FlowPilot_Official/inference.py) and `model_info_goal_free.yaml`.
 
-Inputs, outputs and a minimal ONNX Runtime example for the DST models are in the [ONNX guide](https://github.com/VAIL-UCLA/visnavkit/blob/dev/docs/flowpilot_dst_onnx.md).
+Inputs, outputs and a minimal ONNX Runtime example for the `flowpilot-dst` models are in the [ONNX guide](https://github.com/VAIL-UCLA/visnavkit/blob/dev/docs/flowpilot_dst_onnx.md).
 
 ## Inference
 
@@ -56,7 +57,7 @@ pip install onnxruntime-gpu      # optional, replaces onnxruntime for CUDA (1.23
 
 ```python
 import numpy as np
-from flowpilot import FlowPilotNavigator, GpsGoal, Route, RouteGoal, compass_to_yaw
+from flowpilot import FlowPilotNavigator, GpsGoal, ImprovedFlowPilotNavigator, Route, RouteGoal, compass_to_yaw
 
 nav = FlowPilotNavigator(variant="flowpilot-dst-small", device="cuda")   # downloads the graph
 
@@ -78,19 +79,23 @@ vw, plan = nav.inference_vw(obs, RouteGoal(route, pose=(3.0, 0.2, 0.0)), ego_vw)
 
 vw, plan = nav.step(obs[0, -1], [20.0, 0.5], ego_vw)   # streaming: one frame per call at 20 Hz
 nav.reset()                                            # between episodes
+
+# improved_flowpilot: streaming only, no ego status, no point goal (the route patch guides it)
+nav = ImprovedFlowPilotNavigator(device="cuda")
+vw, plan = nav.step(obs[0, -1], RouteGoal(route, pose=(3.0, 0.2, 0.0)))   # every 20 Hz frame, in order
 ```
 
-> **Pass ego status and a goal at least 20 m away.** The DST exports take the robot's measured speed and yaw rate, `[v, w]` for each of the 20 frames, as a graph input (`ego`, shape `(B, 20, 2)`): pass odometry as `ego_vw`. The goal encoder clips distance at 20 m, so a goal 20 m or farther reads as "keep driving", while a nearer one reads as arriving and the model slows to a stop. `RouteGoal` already sets its goal 20 m along the route; for a point or GPS goal, use a waypoint at least 20 m ahead unless the robot should stop there.
+> **`flowpilot-dst` models: pass ego status and a goal at least 20 m away.** They take the robot's measured speed and yaw rate, `[v, w]` for each of the 20 frames, as a graph input (`ego`, shape `(B, 20, 2)`): pass odometry as `ego_vw`. The goal encoder clips distance at 20 m, so a goal 20 m or farther reads as "keep driving", while a nearer one reads as arriving and the model slows to a stop. `RouteGoal` already sets its goal 20 m along the route; for a point or GPS goal, use a waypoint at least 20 m ahead unless the robot should stop there. `improved_flowpilot` needs neither: it reads only the frames and the route patch.
 
 - **Observations** are 20 frames at 20 Hz, oldest first, at any size. Shorter histories are padded with their oldest frame.
 - **Plans** hold `[x, y, yaw, v, w]` every 0.05 s up to 4 s, with modes ranked best first.
-- **Goals** are required, as the exports have no goal-free input. World poses are `(x, y, yaw)` with x east, y north and yaw counter-clockwise from east.
+- **Goals** are required by the `flowpilot-dst` exports, which have no goal-free input. World poses are `(x, y, yaw)` with x east, y north and yaw counter-clockwise from east.
 - **Ego status** should be measured odometry. Without it the previous command stands in, and a window of zeros reads as a robot at rest. A route goal with a pose per frame derives it from the poses.
 - **Controllers** also run on their own: `make_controller("pure_pursuit").step(plan, ego_speed=1.2)` takes any `[x, y]` or `[x, y, yaw, v, w]` path. Limits, lookahead and gains are config fields, for example `max_v`, `max_steering_angle=None` for differential drive, `kp` and `kd`.
 
 ### Camera
 
-> **Use the training camera.** Both DST exports were trained on clips1k from a single camera model; other optics, mounts or crops shift the plans. We highly recommend using this standard configuration.
+> **Use the training camera.** The `flowpilot-dst` models and `improved_flowpilot` were trained on clips1k from a single camera model; other optics, mounts or crops shift the plans. We highly recommend using this standard configuration.
 
 | | |
 | --- | --- |
@@ -106,19 +111,19 @@ clips1k robots carry a small per-robot principal-point offset (`principal_point_
 ### Recorded clips
 
 ```bash
-python examples/run_clips.py mini_data/*/ [--variant flowpilot-dst-dune]   # every 20-frame window -> <clip>/<variant>.npz
-python examples/render_clips.py mini_data/*/                                # one panel per model -> <clip>/flowpilot_viz.mp4
+python examples/run_clips.py mini_data/*/ [--variant flowpilot-dst-dune | improved_flowpilot]   # every frame from 19 on -> <clip>/<variant>.npz
+python examples/render_clips.py mini_data/*/                                                     # one panel per model -> <clip>/flowpilot_viz.mp4
 ```
 
 A clip holds `front_fe_384x216.mp4`, the `frame_*.npy` arrays at 20 Hz and `route_full.json`. The `.npz` holds the commands, plans, goals, route patches and ground truth. The video draws each model's 4 s plan as a cyan ribbon on the ground, projected through the camera above, with the route patch the model saw as an inset.
 
 <p align="center">
-  <img src="_assets/run_clips_small_vs_dune.gif" alt="render_clips.py on a mini_data clip: flowpilot-dst-small (left) and flowpilot-dst-dune (right)" width="800">
+  <img src="_assets/run_clips_day.gif" alt="render_clips.py on a mini_data clip: flowpilot-dst-small, flowpilot-dst-dune and improved_flowpilot" width="960">
 </p>
-<p align="center"><sub><code>render_clips.py</code> on clip <code>0973fd34</code> of <code>mini_data</code> · left <code>flowpilot-dst-small</code>, right <code>flowpilot-dst-dune</code> · inset: the route patch the model sees</sub></p>
+<p align="center"><sub><code>render_clips.py</code> on clip <code>0973fd34</code> of <code>mini_data</code> · left to right <code>flowpilot-dst-small</code>, <code>flowpilot-dst-dune</code>, <code>improved_flowpilot</code> · inset: the route patch the model sees</sub></p>
 
 <p align="center">
-  <img src="_assets/run_clips_small_vs_dune_night.gif" alt="render_clips.py on a night mini_data clip: flowpilot-dst-small (left) and flowpilot-dst-dune (right)" width="800">
+  <img src="_assets/run_clips_night.gif" alt="render_clips.py on a night mini_data clip: flowpilot-dst-small, flowpilot-dst-dune and improved_flowpilot" width="960">
 </p>
 <p align="center"><sub>Clip <code>c7d48ccc</code> at night · a crosswalk, then a turn onto the sidewalk</sub></p>
 

@@ -1,6 +1,8 @@
 """Run FlowPilot on recorded clips, following each clip's route; writes <clip>/<variant>.npz.
 
-    python examples/run_clips.py [--variant flowpilot-dst-dune] mini_data/*/
+    python examples/run_clips.py [--variant flowpilot-dst-dune | improved_flowpilot] [--onnx <graph>] mini_data/*/
+
+improved_flowpilot streams: one call per frame from the clip's start, with no ego status and no point goal.
 """
 
 import argparse
@@ -10,15 +12,18 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from flowpilot import FlowPilotNavigator, Route, RouteGoal
+from flowpilot import FlowPilotNavigator, ImprovedFlowPilotNavigator, Route, RouteGoal
 
 parser = argparse.ArgumentParser()
 parser.add_argument("clips", nargs="+", type=Path)
 parser.add_argument("--variant", default="flowpilot-dst-small")
+parser.add_argument("--onnx", help="a local graph of the variant, instead of the download")
 args = parser.parse_args()
 variant = args.variant
-nav = FlowPilotNavigator(variant=variant, device="cuda")
-T, H = nav.context_size, 80  # window frames, plan steps (4 s)
+stream = variant == "improved_flowpilot"
+nav = (ImprovedFlowPilotNavigator(args.onnx, device="cuda") if stream
+       else FlowPilotNavigator(args.onnx, variant=variant, device="cuda"))
+T, H = 20, 80  # window frames (results start at frame 19 for every model), plan steps (4 s)
 
 for clip in args.clips:
     load = lambda name: np.load(clip / f"{name}.npy")
@@ -37,16 +42,23 @@ for clip in args.clips:
     yaw = 2 * np.arctan2(q[:, 3], q[:, 0])
 
     out = {k: [] for k in ("t", "vw", "plan", "goal", "patch", "gt")}
-    for t in range(T - 1, len(frames)):
+    nav.reset()
+    for t in range(0 if stream else T - 1, len(frames)):
         w = slice(t - T + 1, t + 1)
-        vw, plan = nav.inference_vw(np.stack(frames[w])[None], RouteGoal(route, poses[w]), ego[w][None])
+        if stream:
+            vw, plan = nav.step(frames[t], RouteGoal(route, poses[t]))
+            if t < T - 1:
+                continue
+            vw, plan = vw[None], plan[None]
+        else:
+            vw, plan = nav.inference_vw(np.stack(frames[w])[None], RouteGoal(route, poses[w]), ego[w][None])
         c, s = np.cos(yaw[t]), np.sin(yaw[t])
         d = xy[t + 1 : t + 1 + H] - xy[t]
         out["t"].append(t)
         out["vw"].append(vw[0])
         out["plan"].append(plan[0])
-        out["goal"].append(nav.last_feeds["goal"][0, -1])  # [distance, cos, sin] at the newest frame
-        out["patch"].append(nav.last_feeds["route_patch"][0, -1].astype(np.uint8))  # the route raster it saw
+        out["goal"].append(np.full(3, np.nan) if stream else nav.last_feeds["goal"][0, -1])  # [distance, cos, sin] at the newest frame
+        out["patch"].append(nav.last_feeds["route_patch"].reshape(-1, 80, 80)[-1].astype(np.uint8))  # the route raster it saw
         out["gt"].append(np.pad(d @ [[c, -s], [s, c]], ((0, H - len(d)), (0, 0)), constant_values=np.nan))
     out = {k: np.stack(v) for k, v in out.items()}
     np.savez(clip / f"{variant}.npz", **out)
@@ -54,5 +66,5 @@ for clip in args.clips:
     err = np.linalg.norm(out["plan"][..., :2] - out["gt"], axis=-1)  # (windows, 80)
     full = ~np.isnan(err).any(axis=1)
     print(f"{clip.name[:8]}  windows {len(err)}  ADE {err[full].mean():.2f} m  FDE {err[full, -1].mean():.2f} m  "
-          f"v_cmd {out['vw'][:, 0].mean():.2f} vs v_gt {ego[T - 1 :, 0].mean():.2f} m/s  "
-          f"goal {out['goal'][:, 0].min():.0f}-{out['goal'][:, 0].max():.0f} m")
+          f"v_cmd {out['vw'][:, 0].mean():.2f} vs v_gt {ego[T - 1 :, 0].mean():.2f} m/s"
+          + ("" if stream else f"  goal {out['goal'][:, 0].min():.0f}-{out['goal'][:, 0].max():.0f} m"))
