@@ -64,21 +64,23 @@ obs = np.random.rand(1, nav.context_size, 3, 216, 384).astype(np.float32)   # (B
 ego_vw = [1.2, 0.0]     # measured speed (m/s) and yaw rate (rad/s)
 
 # Point goal: metres in the ego frame, x forward, y left
-vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw)                    # pure pursuit, vw: (B, 2)
-vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw, controller="pd")   # PD
-traj, scores = nav.inference_trajectory(obs, [8.0, 0.5], ego_vw)        # (B, 6, 80, 5), (B, 6)
+vw, plan = nav.inference_vw(obs, [20.0, 0.5], ego_vw)                    # pure pursuit, vw: (B, 2)
+vw, plan = nav.inference_vw(obs, [20.0, 0.5], ego_vw, controller="pd")   # PD
+traj, scores = nav.inference_trajectory(obs, [20.0, 0.5], ego_vw)        # (B, 6, 80, 5), (B, 6)
 
 # GPS goal: a waypoint and the robot's fix, converted to a point goal
-goal = GpsGoal(goal=(34.06901, -118.44512), robot=(34.06893, -118.44520), yaw=compass_to_yaw(45.0))
+goal = GpsGoal(goal=(34.06908, -118.44505), robot=(34.06893, -118.44520), yaw=compass_to_yaw(45.0))
 vw, plan = nav.inference_vw(obs, goal, ego_vw)
 
 # Route goal: the route patch around the robot, plus the route point 20 m ahead as the point goal
 route = Route([[0.0, 0.0], [25.0, 0.0], [25.0, 40.0]], crosswalks=None)   # world metres; Route.from_gps for lat / lon
 vw, plan = nav.inference_vw(obs, RouteGoal(route, pose=(3.0, 0.2, 0.0)), ego_vw)
 
-vw, plan = nav.step(obs[0, -1], [8.0, 0.5], ego_vw)   # streaming: one frame per call at 20 Hz
-nav.reset()                                           # between episodes
+vw, plan = nav.step(obs[0, -1], [20.0, 0.5], ego_vw)   # streaming: one frame per call at 20 Hz
+nav.reset()                                            # between episodes
 ```
+
+> **Pass ego status and a goal at least 20 m away.** The DST exports take the robot's measured speed and yaw rate, `[v, w]` for each of the 20 frames, as a graph input (`ego`, shape `(B, 20, 2)`): pass odometry as `ego_vw`. The goal encoder clips distance at 20 m, so a goal 20 m or farther reads as "keep driving", while a nearer one reads as arriving and the model slows to a stop. `RouteGoal` already sets its goal 20 m along the route; for a point or GPS goal, use a waypoint at least 20 m ahead unless the robot should stop there.
 
 - **Observations** are 20 frames at 20 Hz, oldest first, at any size. Shorter histories are padded with their oldest frame.
 - **Plans** hold `[x, y, yaw, v, w]` every 0.05 s up to 4 s, with modes ranked best first.

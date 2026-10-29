@@ -1,10 +1,10 @@
 """FlowPilot ONNX navigator: camera frames and a goal in, a plan and a (v, w) command out.
 
     nav = FlowPilotNavigator(variant="flowpilot-dst-small", device="cuda")
-    vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw=[1.2, 0.0])                     # point goal
+    vw, plan = nav.inference_vw(obs, [20.0, 0.5], ego_vw=[1.2, 0.0])                    # point goal
     vw, plan = nav.inference_vw(obs, GpsGoal(goal, robot, yaw), ego_vw=[1.2, 0.0])      # GPS waypoint
     vw, plan = nav.inference_vw(obs, RouteGoal(route, pose), ego_vw=[1.2, 0.0])         # route
-    vw, plan = nav.inference_vw(obs, [8.0, 0.5], ego_vw=[1.2, 0.0], controller="pd")    # PD, not pure pursuit
+    vw, plan = nav.inference_vw(obs, [20.0, 0.5], ego_vw=[1.2, 0.0], controller="pd")   # PD, not pure pursuit
 
 Frame: x forward, y left, metres. ``obs`` is ``(B, T, 3, H, W)`` RGB in [0, 1] at 20 Hz, oldest
 first, ``T`` up to ``context_size``; shorter histories are padded with their oldest frame.
