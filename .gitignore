@@ -5,6 +5,5 @@ __pycache__/
 *.npz
 .pytest_cache/
 
-# Local mini dataset (clip folders with videos + .npy/.json), kept out of git
-mini_data/*
-!mini_data/.gitkeep
+# Outputs of examples/run_clips.py (*.npz above) and examples/render_clips.py
+mini_data/*/flowpilot_viz.mp4
