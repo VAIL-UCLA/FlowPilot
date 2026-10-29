@@ -120,7 +120,7 @@ The goal-free model\* runs the same way, but on a **pinhole** camera: `python ex
 <p align="center">
   <img src="_assets/run_goal_free_pinhole.gif" alt="run_goal_free.py on a mini_data clip: goal-free FlowPilot on the pinhole view" width="640">
 </p>
-<p align="center"><sub><code>run_goal_free.py</code> on clip <code>3e025efc</code> of <code>mini_data</code> · goal-free FlowPilot (old recipe) · pinhole 512 x 288, 21 frames at 5 Hz</sub></p>
+<p align="center"><sub><code>run_goal_free.py</code> on clip <code>0973fd34</code> of <code>mini_data</code> · goal-free FlowPilot (old recipe) · pinhole 512 x 288, 21 frames at 5 Hz</sub></p>
 
 - **Goal distance.** The point-goal encoder clips distance at 20 m, so a goal 20 m or farther reads as "keep driving"; a nearer goal tells the model it is arriving, and it slows down. The route goal therefore sits 20 m ahead along the route (`goal_ahead_m`); its straight-line distance dips a little on curves (17 m on these clips) and drops only near the route's end.
 - **Route.** `route_full.json` is a polyline of `[lon, lat]` points (plain `coordinates` or a GeoJSON `geometry`). `Route.from_gps` takes it as `[lat, lon]` in a local east-north frame, and the robot's pose per frame is `frame_gps` (`[lat, lon]`) with `frame_yaw_deg` (counter-clockwise from east). From the poses the route renders the 40 x 40 m patch per frame and gives the point goal.
