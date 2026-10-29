@@ -115,7 +115,7 @@ A clip holds `front_fe_384x216.mp4`, the `frame_*.npy` arrays at 20 Hz and `rout
 </p>
 <p align="center"><sub><code>render_clips.py</code> on clip <code>0973fd34</code> of <code>mini_data</code> · left <code>flowpilot-dst-small</code>, right <code>flowpilot-dst-dune</code> · inset: the route patch the model sees</sub></p>
 
-The goal-free model\* runs the same way, but on a **pinhole** camera: `python examples/run_goal_free.py mini_data/*/` undistorts each fisheye frame to the model's pinhole camera (512 x 288, fx = fy = 210.667), feeds 21 frames at 5 Hz, and draws the plan through that pinhole camera into `<clip>/goal_free_viz.mp4`. It was trained on that pinhole camera at 5 Hz, so fisheye or 20 Hz input is out of distribution.
+The goal-free model\* runs on a **pinhole** camera, preprocessed as in SidewalkBench and the Navigation Model Zoo's open-loop test: `python examples/run_goal_free.py mini_data/*/` undistorts each fisheye frame (fx = fy = 790, cx = 960, cy = 540 at 1920 x 1080, the k1, k2 above) to the model's pinhole camera (512 x 288, fx = fy = 210.667, cx = 256, cy = 144), feeds 21 frames at 5 Hz (every 4th frame of the 20 Hz video), and draws the top-scored mode through that pinhole camera into `<clip>/goal_free_viz.mp4`. It reproduces the zoo's reference plans on its sample clips. Fisheye or 20 Hz input is out of distribution.
 
 <p align="center">
   <img src="_assets/run_goal_free_pinhole.gif" alt="run_goal_free.py on a mini_data clip: goal-free FlowPilot on the pinhole view" width="640">
